@@ -1,0 +1,39 @@
+
+name: Update energy prices
+
+on:
+  schedule:
+    # Elk uur om 7 over (API publiceert rond het hele uur).
+    - cron: "7 * * * *"
+  # Handmatig starten mogelijk via het tabblad "Actions" op GitHub.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Uitchecken repository
+        uses: actions/checkout@v4
+
+      - name: Python installeren
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Prijzen ophalen
+        run: python fetch_prices.py
+
+      - name: Wijzigingen committen en pushen (alleen als er iets veranderd is)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/prices.json
+          if git diff --cached --quiet; then
+            echo "Geen wijzigingen; niets te pushen."
+          else
+            git commit -m "Update energy prices ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git push
+          fi
